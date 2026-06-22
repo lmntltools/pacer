@@ -1,0 +1,22 @@
+# Pacer speed-test Worker.
+#
+# Deploy:
+#   npm install            # (once, for the local wrangler dev-dependency)
+#   npx wrangler deploy --config worker/wrangler.toml
+#
+# Local dev:
+#   npx wrangler dev --config worker/wrangler.toml
+#
+# After the first deploy, wrangler prints the public URL, e.g.
+#   https://pacer-speedtest.<your-subdomain>.workers.dev
+# Paste that into src/config.ts (WORKER_BASE_URL) or set VITE_WORKER_URL at build.
+
+name = "pacer-speedtest"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+
+# workers.dev gives the Worker a public *.workers.dev URL with no custom domain.
+workers_dev = true
+
+[observability]
+enabled = true
