@@ -3,6 +3,7 @@ import type { Unit } from "./engine/types";
 import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
 import { useSpeedTest } from "./hooks/useSpeedTest";
 import type { UseSpeedTest } from "./hooks/useSpeedTest";
+import { ConnectionPanel } from "./components/ConnectionPanel";
 import { ControlBar } from "./components/ControlBar";
 import { Hero } from "./components/Hero";
 import { LatencyTrace } from "./components/LatencyTrace";
@@ -44,6 +45,10 @@ export default function App() {
           </div>
 
           <MetricStrip metrics={metricsFor(st, unit)} />
+
+          {(st.status === "running" || st.status === "done") && (
+            <ConnectionPanel meta={st.meta} effectiveType={st.effectiveType} variant="bar" />
+          )}
 
           <div className="py-5 sm:py-6">
             <ControlBar
@@ -110,10 +115,8 @@ function Stage({
   if (st.phase === "ping") {
     return <LatencyTrace pings={st.pings} color={ACCENT} />;
   }
-  // idle / meta — scope at rest
-  return (
-    <Oscilloscope samples={[]} unit={unit} color={ACCENT} reducedMotion={reduced} active={false} />
-  );
+  // idle / meta — show the detected connection where the scope rests
+  return <ConnectionPanel meta={st.meta} effectiveType={st.effectiveType} variant="panel" />;
 }
 
 function metricsFor(st: UseSpeedTest, unit: Unit): Metric[] {
