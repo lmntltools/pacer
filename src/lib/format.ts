@@ -54,3 +54,11 @@ const GRADE_COLORS: Record<string, string> = {
 export function gradeColor(grade: string | null): string {
   return grade ? (GRADE_COLORS[grade] ?? "#9AA4B2") : "#9AA4B2";
 }
+
+/** Classify a public IP as IPv4 or IPv6 from its shape. */
+export function ipFamily(ip: string | null | undefined): "IPv4" | "IPv6" | "" {
+  if (!ip) return "";
+  if (ip.includes(":")) return "IPv6";
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return "IPv4";
+  return "";
+}

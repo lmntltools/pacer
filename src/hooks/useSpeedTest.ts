@@ -27,6 +27,8 @@ export interface SpeedTestState {
   status: Status;
   phase: Phase;
   meta: MetaInfo | null;
+  /** Public IPv4, fetched from an IPv4-only echo (the Worker often sees IPv6). */
+  ipv4: string | null;
   effectiveType: string | null;
   live: LiveValues;
   /** Live-updating, frozen on phase change, finalized (to p90) on completion. */
@@ -44,6 +46,7 @@ const INITIAL: SpeedTestState = {
   status: "idle",
   phase: "idle",
   meta: null,
+  ipv4: null,
   effectiveType: null,
   live: { mbps: 0, pingMs: null, jitterMs: null, loadedMs: null, progress: 0 },
   downloadMbps: null,
@@ -78,6 +81,7 @@ export function useSpeedTest(): UseSpeedTest {
       phase: "meta",
       effectiveType: readEffectiveType(),
       meta: s.meta, // keep the connection info we already fetched at idle
+      ipv4: s.ipv4,
     }));
 
     const engine = new SpeedTestEngine(
@@ -141,13 +145,13 @@ export function useSpeedTest(): UseSpeedTest {
   const cancel = useCallback(() => {
     engineRef.current?.cancel();
     engineRef.current = null;
-    setState((s) => ({ ...INITIAL, meta: s.meta, effectiveType: s.effectiveType }));
+    setState((s) => ({ ...INITIAL, meta: s.meta, ipv4: s.ipv4, effectiveType: s.effectiveType }));
   }, []);
 
   const reset = useCallback(() => {
     engineRef.current?.cancel();
     engineRef.current = null;
-    setState((s) => ({ ...INITIAL, meta: s.meta, effectiveType: s.effectiveType }));
+    setState((s) => ({ ...INITIAL, meta: s.meta, ipv4: s.ipv4, effectiveType: s.effectiveType }));
   }, []);
 
   // Fetch connection info once on mount so the telemetry HUD is populated at idle,
@@ -175,6 +179,18 @@ export function useSpeedTest(): UseSpeedTest {
         );
       })
       .catch(() => {});
+
+    // The Worker reports whichever IP the browser connected with — on a dual-stack
+    // network that's usually IPv6. To also show the familiar IPv4 dotted-quad, ask
+    // an IPv4-only echo (forces an IPv4 connection). This is the one external call
+    // in the app; all speed MEASUREMENT stays first-party.
+    fetch("https://api4.ipify.org?format=json", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (alive && j?.ip) setState((s) => ({ ...s, ipv4: j.ip as string }));
+      })
+      .catch(() => {});
+
     return () => {
       alive = false;
     };

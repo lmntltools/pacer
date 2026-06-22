@@ -49,6 +49,12 @@ Cloudflare-specific parts are `request.cf` (for `/meta`) and `wrangler deploy`. 
 Deno or Node port is a couple of lines — the streaming and draining are standard
 Web Streams.
 
+> **One external call.** The Worker reports whichever IP your browser connects with —
+> on a dual-stack network that's usually IPv6. To also show the familiar IPv4
+> dotted-quad, the page makes a single request to an IPv4-only IP echo
+> (`api4.ipify.org`). That's the only third-party call in the app, and it's display
+> metadata only — every speed **measurement** stays first-party.
+
 ## Methodology (in plain language)
 
 This is the part that matters. Here is exactly what Pacer measures and why — for the

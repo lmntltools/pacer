@@ -1,5 +1,6 @@
 import { APP_NAME } from "../config";
 import type { MetaInfo } from "../engine/types";
+import { ipFamily } from "../lib/format";
 
 function Mark() {
   return (
@@ -20,26 +21,33 @@ interface TelemetryItem {
   show: string;
 }
 
-function buildItems(meta: MetaInfo | null, effectiveType: string | null): TelemetryItem[] {
-  if (!meta) return [];
+function buildItems(
+  meta: MetaInfo | null,
+  ipv4: string | null,
+  effectiveType: string | null,
+): TelemetryItem[] {
   const items: TelemetryItem[] = [];
-  if (meta.colo) items.push({ label: "COLO", value: meta.colo, show: "flex" });
-  if (meta.country) items.push({ label: "LOC", value: meta.country, show: "flex" });
-  if (meta.asn) items.push({ label: "ASN", value: `AS${meta.asn}`, show: "hidden sm:flex" });
-  if (meta.isp) items.push({ label: "ISP", value: meta.isp, show: "hidden md:flex" });
+  if (meta?.colo) items.push({ label: "COLO", value: meta.colo, show: "flex" });
+  if (meta?.country) items.push({ label: "LOC", value: meta.country, show: "flex" });
+  if (meta?.asn) items.push({ label: "ASN", value: `AS${meta.asn}`, show: "hidden sm:flex" });
+  if (meta?.isp) items.push({ label: "ISP", value: meta.isp, show: "hidden md:flex" });
   if (effectiveType) items.push({ label: "NET", value: effectiveType.toUpperCase(), show: "hidden sm:flex" });
-  if (meta.ip) items.push({ label: "IP", value: meta.ip, show: "hidden xl:flex" });
+  // Prefer the familiar IPv4 dotted-quad; label by family.
+  const ip = ipv4 ?? meta?.ip ?? "";
+  if (ip) items.push({ label: ipFamily(ip) || "IP", value: ip, show: "hidden lg:flex" });
   return items;
 }
 
 export function TopBar({
   meta,
+  ipv4,
   effectiveType,
 }: {
   meta: MetaInfo | null;
+  ipv4: string | null;
   effectiveType: string | null;
 }) {
-  const items = buildItems(meta, effectiveType);
+  const items = buildItems(meta, ipv4, effectiveType);
   return (
     <header className="border-b border-white/[0.07]">
       <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-4 px-5 py-3.5 sm:px-8">

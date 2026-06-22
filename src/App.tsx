@@ -28,7 +28,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
-      <TopBar meta={st.meta} effectiveType={st.effectiveType} />
+      <TopBar meta={st.meta} ipv4={st.ipv4} effectiveType={st.effectiveType} />
 
       <main className="flex flex-1 flex-col">
         <div className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-5 sm:px-8">
@@ -47,7 +47,7 @@ export default function App() {
           <MetricStrip metrics={metricsFor(st, unit)} />
 
           {(st.status === "running" || st.status === "done") && (
-            <ConnectionPanel meta={st.meta} effectiveType={st.effectiveType} variant="bar" />
+            <ConnectionPanel meta={st.meta} ipv4={st.ipv4} effectiveType={st.effectiveType} variant="bar" />
           )}
 
           <div className="py-5 sm:py-6">
@@ -116,7 +116,7 @@ function Stage({
     return <LatencyTrace pings={st.pings} color={ACCENT} />;
   }
   // idle / meta — show the detected connection where the scope rests
-  return <ConnectionPanel meta={st.meta} effectiveType={st.effectiveType} variant="panel" />;
+  return <ConnectionPanel meta={st.meta} ipv4={st.ipv4} effectiveType={st.effectiveType} variant="panel" />;
 }
 
 function metricsFor(st: UseSpeedTest, unit: Unit): Metric[] {
