@@ -15,6 +15,14 @@ no LibreSpeed, no third-party measurement endpoints.
 
 ---
 
+## Documentation
+
+- **[Tutorial](TUTORIAL.md)** — run it locally, point it at your own backend, use the engine standalone, deploy your own copy.
+- **[How it works](HOW_IT_WORKS.md)** — the full measurement methodology, decision by decision (the deep dive).
+- **[Contributing](CONTRIBUTING.md)** — dev setup, conventions, and how to port the Worker to Deno/Node.
+
+---
+
 ## Why this exists
 
 Most "speed test in 200 lines" demos quietly under-report by 2–5×. They use a single
@@ -43,7 +51,8 @@ Web Streams.
 
 ## Methodology (in plain language)
 
-This is the part that matters. Here is exactly what Pacer measures and why.
+This is the part that matters. Here is exactly what Pacer measures and why — for the
+code-level deep dive, see **[How it works](HOW_IT_WORKS.md)**.
 
 ### Ping & jitter
 About 20 sequential `GET /down?bytes=0` requests. Round-trip time is taken from
