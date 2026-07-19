@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { WORKER_BASE_URL } from "../config";
+import { ENABLE_IPV4_ECHO, IPV4_ECHO_URL, WORKER_BASE_URL } from "../config";
 import { SpeedTestEngine } from "../engine/speedtest";
 import type {
   MetaInfo,
@@ -9,6 +9,12 @@ import type {
 } from "../engine/types";
 
 export type Status = "idle" | "running" | "done" | "error";
+
+/** Strict IPv4 dotted-quad check (each octet 0–255) for validating the echo response. */
+function isIpv4(s: string): boolean {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s);
+  return !!m && m.slice(1).every((o) => Number(o) <= 255);
+}
 
 export interface LiveValues {
   /** Current-phase instantaneous throughput, Mbps. */
@@ -183,13 +189,19 @@ export function useSpeedTest(): UseSpeedTest {
     // The Worker reports whichever IP the browser connected with — on a dual-stack
     // network that's usually IPv6. To also show the familiar IPv4 dotted-quad, ask
     // an IPv4-only echo (forces an IPv4 connection). This is the one external call
-    // in the app; all speed MEASUREMENT stays first-party.
-    fetch("https://api4.ipify.org?format=json", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (alive && j?.ip) setState((s) => ({ ...s, ipv4: j.ip as string }));
-      })
-      .catch(() => {});
+    // in the app; all speed MEASUREMENT stays first-party, and it can be disabled
+    // entirely (ENABLE_IPV4_ECHO / VITE_IPV4_ECHO=false).
+    if (ENABLE_IPV4_ECHO) {
+      fetch(IPV4_ECHO_URL, { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          // Only trust a well-formed IPv4 dotted-quad from the third party before
+          // we surface it — never render an arbitrary string it hands back.
+          const ip = typeof j?.ip === "string" ? j.ip : "";
+          if (alive && isIpv4(ip)) setState((s) => ({ ...s, ipv4: ip }));
+        })
+        .catch(() => {});
+    }
 
     return () => {
       alive = false;

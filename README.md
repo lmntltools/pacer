@@ -55,7 +55,11 @@ Web Streams.
 > on a dual-stack network that's usually IPv6. To also show the familiar IPv4
 > dotted-quad, the page makes a single request to an IPv4-only IP echo
 > (`api4.ipify.org`). That's the only third-party call in the app, and it's display
-> metadata only — every speed **measurement** stays first-party.
+> metadata only — every speed **measurement** stays first-party. The response is
+> validated as a real IPv4 before it's shown, and the call can be turned off
+> entirely for a zero-third-party build (`ENABLE_IPV4_ECHO` in
+> [`src/config.ts`](src/config.ts), or `VITE_IPV4_ECHO=false` at build time) — the
+> Worker-seen IP still displays.
 
 ## Methodology (in plain language)
 
@@ -159,13 +163,25 @@ Paste it into [`src/config.ts`](src/config.ts) (`WORKER_BASE_URL`) or set `VITE_
 
 | Route | Behavior |
 | --- | --- |
-| `GET /down?bytes=N` | Streams N bytes (≤100 MB) of fresh random data via a `ReadableStream`. |
+| `GET /down?bytes=N` | Streams N bytes (≤64 MB) of fresh random data via a `ReadableStream`. |
 | `POST /up` | Drains and discards the body; returns `{ bytes }`. |
 | `GET /meta` | `{ ip, isp, asn, colo, country }` from `request.cf` + `CF-Connecting-IP`. |
 | `OPTIONS *` | CORS preflight. |
 
-All responses send `Access-Control-Allow-Origin: *`, `Cache-Control: no-store`, and
-`Timing-Allow-Origin: *`.
+Responses send `Cache-Control: no-store`. **CORS is scoped to an allowlist** — the
+Worker reflects `Access-Control-Allow-Origin` / `Timing-Allow-Origin` only for the
+deployed site and `localhost` dev, so another website can't use it as a free
+bandwidth source. Forking, or using a custom domain? Add your origin to
+`ALLOWED_ORIGINS` in [`worker/src/index.ts`](worker/src/index.ts).
+
+### Abuse & rate limiting
+
+The Worker is public and unauthenticated by nature (it hands random bytes to a
+browser). Two defenses are built in: a hard **64 MB cap** per `/down` (`MAX_BYTES`)
+and the CORS allowlist above. Because a determined caller can still script raw
+requests, if you run this at any scale add a **Cloudflare Rate Limiting rule** on
+the Worker route (dashboard → Security → WAF → Rate limiting rules) — that's the
+right layer for per-IP throttling and needs no code.
 
 ## Deploying the frontend (GitHub Pages)
 
@@ -176,6 +192,12 @@ go to **Settings → Pages → Build and deployment → Source** and select **Gi
 Because the site is served from `https://<user>.github.io/pacer/`, Vite's `base` is set
 to `/pacer/` ([`vite.config.ts`](vite.config.ts)). Fork under a different name → change
 `base` to match.
+
+The page ships a **Content-Security-Policy** (and `Referrer-Policy`) via `<meta>` in
+[`index.html`](index.html): scripts are `'self'` plus a hash-pinned inline theme
+script, and `connect-src` is limited to the Worker and the IPv4 echo. If you point
+`WORKER_BASE_URL` at a different backend, update the CSP's `connect-src` to match
+(and re-hash the inline script if you edit it).
 
 ## License
 
