@@ -298,3 +298,29 @@
     opacity: 1;
   }
 }
+
+/* ---------- product landing (pacer.lmntltools.com) ----------
+   Scroll-activated reveals for the LMNTL-hosted landing. Mechanical motion:
+   a short rise on the mech curve, staggered by unit. The global reduced-motion
+   block above zeroes the transition; the .in state still lands elements at
+   full opacity. */
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.55s var(--ease-mech),
+    transform 0.55s var(--ease-mech);
+}
+.lp-reveal.in {
+  opacity: 1;
+  transform: none;
+}
+.lp-d1 {
+  transition-delay: 90ms;
+}
+.lp-d2 {
+  transition-delay: 180ms;
+}
+.lp-d3 {
+  transition-delay: 270ms;
+}
