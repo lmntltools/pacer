@@ -9,6 +9,7 @@ import {
   median,
   min,
   percentile,
+  windowsAgree,
 } from "./stats";
 
 // These tests pin the arithmetic that decides every headline number. Bits-vs-bytes
@@ -100,6 +101,22 @@ describe("jitter (mean |consecutive Δ|)", () => {
     expect(jitter([])).toBe(0);
     expect(jitter([42])).toBe(0);
     expect(jitter([5, 5, 5])).toBe(0);
+  });
+});
+
+describe("windowsAgree (plateau detection)", () => {
+  it("is true when two windows read the same within tolerance", () => {
+    expect(windowsAgree([100, 100, 100], [100, 100, 100], 0.04)).toBe(true);
+    expect(windowsAgree([100, 101, 99], [100, 100, 100], 0.04)).toBe(true); // means equal
+    expect(windowsAgree([104, 104, 104], [100, 100, 100], 0.04)).toBe(true); // exactly 4%
+  });
+  it("is false when the rate is still moving beyond tolerance", () => {
+    expect(windowsAgree([105, 105, 105], [100, 100, 100], 0.04)).toBe(false); // 5% > 4%
+    expect(windowsAgree([150, 150, 150], [100, 100, 100], 0.04)).toBe(false); // still ramping
+  });
+  it("needs at least 3 samples per window (noise guard)", () => {
+    expect(windowsAgree([100, 100], [100, 100, 100], 0.04)).toBe(false);
+    expect(windowsAgree([100, 100, 100], [100, 100], 0.04)).toBe(false);
   });
 });
 

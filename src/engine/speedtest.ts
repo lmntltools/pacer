@@ -41,6 +41,7 @@ import {
   median,
   min,
   percentile,
+  windowsAgree,
 } from "./stats";
 import type {
   Bufferbloat,
@@ -65,6 +66,15 @@ const UL_POOL_MAX = 16 * MB;
 const UL_START_CHUNK = 512 * 1024;
 const UL_MIN_CHUNK = 128 * 1024;
 const ADAPT_TARGET_S = 1.5; // aim each request to last ~1.5s
+// Adaptive stop: transfer until the rate PLATEAUS rather than for a fixed byte
+// budget. A fast link needs a few seconds to ramp past TCP slow-start; a fixed
+// 100 MB budget can end that ramp early and under-report. We keep going until a
+// recent 2 s window agrees with the prior 2 s window (within tolerance), then
+// stop — so fast links fully ramp, but we don't keep burning data once the
+// number is stable. The time and (raised) byte caps remain as hard ceilings.
+const STABLE_WINDOW_MS = 2000; // compare the last 2 s against the prior 2 s
+const STABLE_MIN_MS = 2 * STABLE_WINDOW_MS; // need two full windows past warmup
+const STABLE_TOL = 0.04; // windows within 4% ⇒ plateaued
 // Desync the parallel streams so their request boundaries never all line up —
 // otherwise every stream can finish its request at the same instant, leaving a
 // brief moment where the whole link goes idle (a visible dip to 0 on the chart,
@@ -78,8 +88,11 @@ const DEFAULTS: Required<Omit<EngineOptions, "baseUrl">> = {
   parallelStreams: 5,
   pingCount: 20,
   warmupMs: 1200,
-  maxPhaseMs: 13000,
-  maxBytesPerPhase: 100 * MB,
+  maxPhaseMs: 15000,
+  // Safety ceiling only — the adaptive plateau-stop (and the time cap) normally
+  // end a phase well before this. Raised from 100 MB so a fast link isn't cut
+  // off mid-ramp; the time cap still bounds worst-case data (~1.5 GB at ~0.9 Gbps).
+  maxBytesPerPhase: 1500 * MB,
   sampleIntervalMs: 100,
 };
 
@@ -331,7 +344,20 @@ export class SpeedTestEngine {
         sample,
         progress: clamp(Math.max(now / maxPhaseMs, curBytes / maxBytesPerPhase), 0, 1),
       });
-      if (curBytes >= maxBytesPerPhase) phaseCtrl.abort(); // byte cap
+      if (curBytes >= maxBytesPerPhase) phaseCtrl.abort(); // safety byte ceiling
+      // Adaptive stop: once we have two full windows past warmup and the rate has
+      // plateaued, end the phase — the link has ramped and further transfer just
+      // burns data without changing the number.
+      if (now >= warmupMs + STABLE_MIN_MS) {
+        const recent: number[] = [];
+        const prior: number[] = [];
+        for (const s of samples) {
+          if (s.t < warmupMs) continue;
+          if (s.t >= now - STABLE_WINDOW_MS) recent.push(s.mbps);
+          else if (s.t >= now - 2 * STABLE_WINDOW_MS) prior.push(s.mbps);
+        }
+        if (windowsAgree(recent, prior, STABLE_TOL)) phaseCtrl.abort();
+      }
     }, sampleIntervalMs);
 
     // Loaded-latency pinger: measures RTT while the link is saturated.

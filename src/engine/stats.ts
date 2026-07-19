@@ -43,6 +43,21 @@ export function mean(values: number[]): number {
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
+/**
+ * True when two measurement windows agree within `tol` (a fraction, e.g. 0.04 =
+ * 4%). Used to detect that throughput has *plateaued* — once a recent window and
+ * the one before it read the same, the link has ramped and the transfer can stop
+ * early instead of burning more data. Requires ≥3 samples per window so a couple
+ * of noisy readings can't trigger a false "stable".
+ */
+export function windowsAgree(recent: number[], prior: number[], tol: number): boolean {
+  if (recent.length < 3 || prior.length < 3) return false;
+  const a = mean(recent);
+  const b = mean(prior);
+  const denom = Math.max(a, b, 1e-9);
+  return Math.abs(a - b) / denom <= tol;
+}
+
 export function min(values: number[]): number {
   if (values.length === 0) return 0;
   return Math.min(...values);
