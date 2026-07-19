@@ -43,9 +43,7 @@ export default function App() {
           {/* instrument: hero readout + live scope */}
           <div className="grid flex-1 grid-cols-1 items-center gap-9 py-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.12fr)] lg:gap-14 lg:py-12">
             <Hero st={st} unit={unit} />
-            <div className="h-[210px] rounded-mod border border-line bg-panel p-4 sm:h-[260px] sm:p-5 lg:h-[300px]">
-              <Stage st={st} unit={unit} reduced={reduced} isTransfer={isTransfer} theme={theme} />
-            </div>
+            <Stage st={st} unit={unit} reduced={reduced} isTransfer={isTransfer} theme={theme} />
           </div>
 
           <MetricStrip metrics={metricsFor(st, unit)} />
@@ -94,9 +92,15 @@ function Stage({
   isTransfer: boolean;
   theme: string;
 }) {
+  // One shared module frame at a fixed height — used for the views that need a
+  // definite plot area (scope / latency / error). The idle connection panel
+  // brings its own frame and sizes to content, so it never clips.
+  const FRAME =
+    "rounded-mod border border-line bg-panel h-[210px] p-4 sm:h-[260px] sm:p-5 lg:h-[300px]";
+
   if (st.status === "error") {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 rounded-ctrl border border-clip-red/40 bg-clip-red/[0.06] text-center">
+      <div className={`${FRAME} flex flex-col items-center justify-center gap-2 text-center`}>
         <AlertIcon className="text-2xl text-clip-red" />
         <div className="text-sm font-medium text-ink">Test failed</div>
         <div className="mono max-w-xs text-[11px] text-ink-60">
@@ -107,17 +111,23 @@ function Stage({
   }
   if (isTransfer || st.status === "done") {
     return (
-      <Oscilloscope
-        samples={st.chart}
-        unit={unit}
-        reducedMotion={reduced}
-        active={st.status === "running"}
-        theme={theme}
-      />
+      <div className={FRAME}>
+        <Oscilloscope
+          samples={st.chart}
+          unit={unit}
+          reducedMotion={reduced}
+          active={st.status === "running"}
+          theme={theme}
+        />
+      </div>
     );
   }
   if (st.phase === "ping") {
-    return <LatencyTrace pings={st.pings} />;
+    return (
+      <div className={FRAME}>
+        <LatencyTrace pings={st.pings} />
+      </div>
+    );
   }
   // idle / meta — show the detected connection where the scope rests
   return <ConnectionPanel meta={st.meta} ipv4={st.ipv4} effectiveType={st.effectiveType} variant="panel" />;

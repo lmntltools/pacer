@@ -65,8 +65,10 @@ export function ConnectionPanel({ meta, ipv4, effectiveType, variant = "panel" }
   }
 
   // ---- tall panel (idle stage) — a rack module -----------------------------
+  // min-height (not h-full) so it lines up with the scope on desktop but grows
+  // to fit its rows on a narrow phone instead of clipping the bottom line.
   return (
-    <div className="flex h-full flex-col justify-center rounded-mod border border-line bg-panel px-5 py-5 sm:px-6">
+    <div className="flex min-h-[210px] flex-col justify-center rounded-mod border border-line bg-panel px-5 py-5 sm:min-h-[260px] sm:px-6 lg:min-h-[300px]">
       <div className="flex items-center justify-between gap-2 border-b border-line-soft pb-3">
         <div className="flex items-center gap-2.5">
           <span className="led on-dark" style={{ backgroundColor: "var(--signal)", borderColor: "var(--signal)" }} aria-hidden="true" />
