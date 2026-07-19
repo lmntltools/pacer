@@ -1,6 +1,6 @@
 import type { Unit } from "../engine/types";
 import type { UseSpeedTest } from "../hooks/useSpeedTest";
-import { formatMs, formatSpeed, unitLabel } from "../lib/format";
+import { formatAltUnit, formatMs, formatSpeed, unitLabel } from "../lib/format";
 import { DownIcon, UpIcon } from "./icons";
 
 type Tone = "idle" | "live" | "done";
@@ -12,6 +12,7 @@ function Readout({
   unit,
   size,
   tone,
+  alt,
 }: {
   dir?: "down" | "up";
   label: string;
@@ -19,6 +20,8 @@ function Readout({
   unit: string;
   size: "giant" | "big";
   tone: Tone;
+  /** Same speed in the other unit, shown small under results (e.g. "≈ 60.7 MB/s"). */
+  alt?: string;
 }) {
   const valueColor = tone === "idle" ? "text-ink-40" : "text-ink";
   const valueSize =
@@ -45,6 +48,7 @@ function Readout({
         {tone === "live" && <span className="rd-cursor mono text-[clamp(1.6rem,5vw,3rem)] leading-none">_</span>}
         <span className="mono text-[clamp(0.8rem,1.6vw,1.1rem)] text-ink-40">{unit}</span>
       </div>
+      {alt && <div className="mono mt-1.5 text-[12px] text-ink-40 tnum">{alt}</div>}
     </div>
   );
 }
@@ -61,6 +65,7 @@ export function Hero({ st, unit }: { st: UseSpeedTest; unit: Unit }) {
           unit={unitLabel(unit)}
           size="giant"
           tone="done"
+          alt={formatAltUnit(st.downloadMbps, unit)}
         />
         <Readout
           dir="up"
@@ -69,6 +74,7 @@ export function Hero({ st, unit }: { st: UseSpeedTest; unit: Unit }) {
           unit={unitLabel(unit)}
           size="big"
           tone="done"
+          alt={formatAltUnit(st.uploadMbps, unit)}
         />
       </div>
     );
