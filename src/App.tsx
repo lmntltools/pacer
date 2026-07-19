@@ -3,6 +3,7 @@ import type { Unit } from "./engine/types";
 import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
 import { useSpeedTest } from "./hooks/useSpeedTest";
 import type { UseSpeedTest } from "./hooks/useSpeedTest";
+import { useTheme } from "./hooks/useTheme";
 import { ConnectionPanel } from "./components/ConnectionPanel";
 import { ControlBar } from "./components/ControlBar";
 import { Hero } from "./components/Hero";
@@ -15,32 +16,35 @@ import { TopBar } from "./components/TopBar";
 import { AlertIcon } from "./components/icons";
 import { formatMs, formatSpeed, gradeColor, unitLabel } from "./lib/format";
 
-const ACCENT = "#3DF5C4";
-const ACCENT_UP = "#2BD3A8";
-
 export default function App() {
   const st = useSpeedTest();
   const reduced = usePrefersReducedMotion();
+  const { theme, toggle } = useTheme();
   const [unit, setUnit] = useState<Unit>("mbps");
 
   const isTransfer = st.phase === "download" || st.phase === "upload";
-  const scopeColor = st.phase === "upload" ? ACCENT_UP : ACCENT;
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
-      <TopBar meta={st.meta} ipv4={st.ipv4} effectiveType={st.effectiveType} />
+      <TopBar
+        meta={st.meta}
+        ipv4={st.ipv4}
+        effectiveType={st.effectiveType}
+        theme={theme}
+        onToggleTheme={toggle}
+      />
 
       <main className="flex flex-1 flex-col">
-        <div className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-5 sm:px-8">
-          <div className="border-b border-white/[0.07] py-5 sm:py-6">
+        <div className="mx-auto flex w-full max-w-[1120px] flex-1 flex-col px-5 sm:px-10">
+          <div className="border-b border-line py-5 sm:py-6">
             <PhaseRail phase={st.phase} />
           </div>
 
           {/* instrument: hero readout + live scope */}
           <div className="grid flex-1 grid-cols-1 items-center gap-9 py-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.12fr)] lg:gap-14 lg:py-12">
             <Hero st={st} unit={unit} />
-            <div className="h-[210px] sm:h-[260px] lg:h-[300px]">
-              <Stage st={st} unit={unit} color={scopeColor} reduced={reduced} isTransfer={isTransfer} />
+            <div className="h-[210px] rounded-mod border border-line bg-panel p-4 sm:h-[260px] sm:p-5 lg:h-[300px]">
+              <Stage st={st} unit={unit} reduced={reduced} isTransfer={isTransfer} theme={theme} />
             </div>
           </div>
 
@@ -63,8 +67,8 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="border-t border-white/[0.07]">
-        <p className="mx-auto max-w-[1200px] px-5 py-4 text-center font-mono text-[10px] leading-relaxed tracking-wide text-fg-faint sm:px-8">
+      <footer className="border-t border-line">
+        <p className="mono mx-auto max-w-[1120px] px-5 py-4 text-center text-[10px] leading-relaxed text-ink-40 sm:px-10">
           5 parallel streams, summed · TCP slow-start discarded · 90th-percentile bandwidth ·
           TTFB ping · jitter = mean consecutive RTT delta
         </p>
@@ -80,22 +84,22 @@ export default function App() {
 function Stage({
   st,
   unit,
-  color,
   reduced,
   isTransfer,
+  theme,
 }: {
   st: UseSpeedTest;
   unit: Unit;
-  color: string;
   reduced: boolean;
   isTransfer: boolean;
+  theme: string;
 }) {
   if (st.status === "error") {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 border border-bad/30 bg-bad/[0.04] text-center">
-        <AlertIcon className="text-2xl text-bad" />
-        <div className="text-sm font-medium text-fg">Test failed</div>
-        <div className="max-w-xs font-mono text-[11px] text-fg-dim">
+      <div className="flex h-full flex-col items-center justify-center gap-2 rounded-ctrl border border-clip-red/40 bg-clip-red/[0.06] text-center">
+        <AlertIcon className="text-2xl text-clip-red" />
+        <div className="text-sm font-medium text-ink">Test failed</div>
+        <div className="mono max-w-xs text-[11px] text-ink-60">
           {st.error ?? "Could not reach the test server."}
         </div>
       </div>
@@ -106,14 +110,14 @@ function Stage({
       <Oscilloscope
         samples={st.chart}
         unit={unit}
-        color={color}
         reducedMotion={reduced}
         active={st.status === "running"}
+        theme={theme}
       />
     );
   }
   if (st.phase === "ping") {
-    return <LatencyTrace pings={st.pings} color={ACCENT} />;
+    return <LatencyTrace pings={st.pings} />;
   }
   // idle / meta — show the detected connection where the scope rests
   return <ConnectionPanel meta={st.meta} ipv4={st.ipv4} effectiveType={st.effectiveType} variant="panel" />;
@@ -154,9 +158,7 @@ function metricsFor(st: UseSpeedTest, unit: Unit): Metric[] {
       {
         label: transfer && st.phase === "upload" ? "Download" : "Bufferbloat",
         value:
-          transfer && st.phase === "upload"
-            ? formatSpeed(st.downloadMbps, unit)
-            : "—",
+          transfer && st.phase === "upload" ? formatSpeed(st.downloadMbps, unit) : "—",
         unit: transfer && st.phase === "upload" ? unitLabel(unit) : "",
         sub: transfer && st.phase === "upload" ? "result" : "measuring",
       },

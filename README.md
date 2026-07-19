@@ -30,7 +30,9 @@ connection (which can't saturate a fast link), they include TCP slow-start in th
 average, they measure latency with `Date.now()`, and they upload a buffer of zeros
 that the network compresses into a fake-fast result. Pacer does the boring,
 correct thing in every one of those places — and shows its work in a calm,
-instrument-cluster UI.
+instrument-rack UI: a machined faceplate with engraved labels, a monospace readout,
+recessed state LEDs, and one saturated signal color, in both a light "aluminum"
+and a "night rack" dark theme (it follows your system, with a manual toggle).
 
 ## Architecture
 

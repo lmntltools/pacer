@@ -1,16 +1,24 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#080A0C" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#e3e4e0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141619" media="(prefers-color-scheme: dark)" />
     <meta
       name="description"
       content="Pacer — a precision internet speed test with a hand-written measurement engine. Real parallel-stream throughput, TTFB ping, jitter, and bufferbloat."
     />
     <title>Pacer — Internet Speed Test</title>
+    <!-- apply the saved palette before first paint to avoid a theme flash -->
+    <script>
+      try {
+        var t = localStorage.getItem("pacer-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

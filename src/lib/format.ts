@@ -43,16 +43,17 @@ export function formatTimestamp(ms: number): string {
   });
 }
 
+// CSS-var references so grade colors repaint with the light/dark token layer.
 const GRADE_COLORS: Record<string, string> = {
-  A: "#3DF5C4",
-  B: "#7CE0B0",
-  C: "#FFB020",
-  D: "#FF8A3D",
-  F: "#FF5C5C",
+  A: "var(--success-ink)",
+  B: "var(--meter-green)",
+  C: "var(--meter-amber)",
+  D: "var(--meter-amber)",
+  F: "var(--clip-text)",
 };
 
 export function gradeColor(grade: string | null): string {
-  return grade ? (GRADE_COLORS[grade] ?? "#9AA4B2") : "#9AA4B2";
+  return grade ? (GRADE_COLORS[grade] ?? "var(--ink-40)") : "var(--ink-40)";
 }
 
 /** Classify a public IP as IPv4 or IPv6 from its shape. */

@@ -13,3 +13,5 @@ export const WORKER_BASE_URL: string =
 
 export const APP_NAME = "Pacer";
 export const APP_TAGLINE = "Precision internet speed test";
+/** Model designation shown beside the wordmark — house-style "rack unit" label. */
+export const APP_MODEL = "SPD-1";

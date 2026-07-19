@@ -6,15 +6,23 @@ import { formatSpeed, toUnit, unitLabel } from "../lib/format";
 interface Props {
   samples: ThroughputSample[];
   unit: Unit;
-  color: string;
   reducedMotion: boolean;
   active: boolean;
+  /** Repaint trigger — canvas colors are read from the token layer per draw. */
+  theme: string;
   windowMs?: number;
 }
 
 const PAD = { top: 18, right: 52, bottom: 22, left: 4 };
 
-export function Oscilloscope({ samples, unit, color, reducedMotion, active, windowMs = 13000 }: Props) {
+/** Read a resolved CSS custom property off :root (so the plot tracks the theme). */
+function cssVar(name: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+
+export function Oscilloscope({ samples, unit, reducedMotion, active, theme, windowMs = 13000 }: Props) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -36,6 +44,13 @@ export function Oscilloscope({ samples, unit, color, reducedMotion, active, wind
     if (!canvas || size.w === 0 || size.h === 0) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    // resolve theme colors at draw time
+    const cSignal = cssVar("--signal", "#2e5bff");
+    const cLine = cssVar("--line", "rgba(23,25,27,0.14)");
+    const cLineSoft = cssVar("--line-soft", "rgba(23,25,27,0.08)");
+    const cAxis = cssVar("--ink-40", "#606469");
+    const cEmpty = cssVar("--cell-empty", "rgba(23,25,27,0.07)");
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = size.w * dpr;
@@ -59,7 +74,7 @@ export function Oscilloscope({ samples, unit, color, reducedMotion, active, wind
     const xOf = (t: number) => PAD.left + (t / maxT) * plotW;
     const yOf = (v: number) => PAD.top + plotH - (Math.min(v, maxY) / maxY) * plotH;
 
-    ctx.font = "10px 'JetBrains Mono', ui-monospace, monospace";
+    ctx.font = "10px 'IBM Plex Mono', ui-monospace, monospace";
     ctx.textBaseline = "middle";
 
     // horizontal gridlines + right-edge axis labels
@@ -67,13 +82,13 @@ export function Oscilloscope({ samples, unit, color, reducedMotion, active, wind
     for (let i = 0; i <= rows; i++) {
       const v = (maxY / rows) * i;
       const y = yOf(v);
-      ctx.strokeStyle = i === 0 ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.045)";
+      ctx.strokeStyle = i === 0 ? cLine : cLineSoft;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(PAD.left, Math.round(y) + 0.5);
       ctx.lineTo(PAD.left + plotW, Math.round(y) + 0.5);
       ctx.stroke();
-      ctx.fillStyle = "rgba(110,120,134,0.9)";
+      ctx.fillStyle = cAxis;
       ctx.textAlign = "left";
       ctx.fillText(i === 0 ? "0" : formatAxis(v), PAD.left + plotW + 8, y);
     }
@@ -82,19 +97,19 @@ export function Oscilloscope({ samples, unit, color, reducedMotion, active, wind
     ctx.textAlign = "center";
     for (let t = 2000; t < maxT; t += 2000) {
       const x = xOf(t);
-      ctx.strokeStyle = "rgba(255,255,255,0.03)";
+      ctx.strokeStyle = cEmpty;
       ctx.beginPath();
       ctx.moveTo(Math.round(x) + 0.5, PAD.top);
       ctx.lineTo(Math.round(x) + 0.5, PAD.top + plotH);
       ctx.stroke();
-      ctx.fillStyle = "rgba(84,94,107,0.8)";
+      ctx.fillStyle = cAxis;
       ctx.fillText(`${t / 1000}s`, x, PAD.top + plotH + 11);
     }
 
     if (samples.length >= 2) {
       const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + plotH);
-      grad.addColorStop(0, withAlpha(color, 0.28));
-      grad.addColorStop(1, withAlpha(color, 0));
+      grad.addColorStop(0, withAlpha(cSignal, 0.18));
+      grad.addColorStop(1, withAlpha(cSignal, 0));
       ctx.beginPath();
       ctx.moveTo(xOf(samples[0].t), yOf(values[0]));
       for (let i = 1; i < samples.length; i++) ctx.lineTo(xOf(samples[i].t), yOf(values[i]));
@@ -104,36 +119,31 @@ export function Oscilloscope({ samples, unit, color, reducedMotion, active, wind
       ctx.fillStyle = grad;
       ctx.fill();
 
+      // the trace — flat cobalt, no glow (borders/color carry the design, not blur)
       ctx.beginPath();
       ctx.moveTo(xOf(samples[0].t), yOf(values[0]));
       for (let i = 1; i < samples.length; i++) ctx.lineTo(xOf(samples[i].t), yOf(values[i]));
-      ctx.strokeStyle = color;
+      ctx.strokeStyle = cSignal;
       ctx.lineWidth = 2;
       ctx.lineJoin = "round";
-      ctx.shadowColor = withAlpha(color, 0.55);
-      ctx.shadowBlur = 12;
       ctx.stroke();
-      ctx.shadowBlur = 0;
 
       if (active) {
         const lx = xOf(lastT);
         const ly = yOf(values[values.length - 1]);
-        ctx.strokeStyle = withAlpha(color, 0.35);
+        ctx.strokeStyle = withAlpha(cSignal, 0.5);
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(lx, ly);
         ctx.lineTo(lx, PAD.top + plotH);
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 14;
+        ctx.arc(lx, ly, 3, 0, Math.PI * 2);
+        ctx.fillStyle = cSignal;
         ctx.fill();
-        ctx.shadowBlur = 0;
       }
     }
-  }, [samples, unit, color, size, active, windowMs, reducedMotion]);
+  }, [samples, unit, size, active, windowMs, reducedMotion, theme]);
 
   const current = samples.length ? samples[samples.length - 1].mbps : 0;
   const peakMbps = samples.length ? Math.max(...samples.map((s) => s.mbps)) : 0;
@@ -147,12 +157,14 @@ export function Oscilloscope({ samples, unit, color, reducedMotion, active, wind
         role="img"
         aria-label={`Throughput ${formatSpeed(current, unit)} ${unitLabel(unit)}`}
       >
-        <div className="flex items-baseline justify-between font-mono text-[11px] text-fg-faint">
-          <span className="uppercase tracking-[0.18em]">Throughput</span>
-          <span className="tnum">peak {formatSpeed(peakMbps, unit)} {unitLabel(unit)}</span>
+        <div className="flex items-baseline justify-between">
+          <span className="eng">Throughput</span>
+          <span className="mono text-[11px] text-ink-40 tnum">
+            peak {formatSpeed(peakMbps, unit)} {unitLabel(unit)}
+          </span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
-          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+        <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--cell-empty)" }}>
+          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "var(--signal)" }} />
         </div>
       </div>
     );
@@ -180,8 +192,15 @@ function formatAxis(v: number): string {
   return v.toFixed(1);
 }
 
-function withAlpha(hex: string, alpha: number): string {
-  const m = hex.replace("#", "");
+/** Accepts #rgb / #rrggbb and returns an rgba() string at the given alpha. */
+function withAlpha(color: string, alpha: number): string {
+  const m = color.replace("#", "").trim();
+  if (m.length === 3) {
+    const r = parseInt(m[0] + m[0], 16);
+    const g = parseInt(m[1] + m[1], 16);
+    const b = parseInt(m[2] + m[2], 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
   const r = parseInt(m.slice(0, 2), 16);
   const g = parseInt(m.slice(2, 4), 16);
   const b = parseInt(m.slice(4, 6), 16);

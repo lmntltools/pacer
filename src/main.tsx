@@ -1,11 +1,5 @@
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/500.css";
-import "@fontsource/inter/600.css";
-import "@fontsource/inter/700.css";
-import "@fontsource/jetbrains-mono/400.css";
-import "@fontsource/jetbrains-mono/500.css";
-import "@fontsource/jetbrains-mono/600.css";
-import "@fontsource/jetbrains-mono/700.css";
+// Fonts (Archivo variable + IBM Plex Mono) are self-hosted and declared via
+// @font-face in index.css — no third-party CDN, both type axes intact.
 import "./index.css";
 
 import { StrictMode } from "react";
