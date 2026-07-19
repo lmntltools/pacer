@@ -13,6 +13,7 @@ import { MetricStrip } from "./components/MetricStrip";
 import { Oscilloscope } from "./components/Oscilloscope";
 import { PhaseRail } from "./components/PhaseRail";
 import { TopBar } from "./components/TopBar";
+import { LmntlFooter } from "./components/LmntlFooter";
 import { AlertIcon } from "./components/icons";
 import { formatMs, formatSpeed, gradeColor, unitLabel } from "./lib/format";
 
@@ -23,6 +24,7 @@ export default function App() {
   const [unit, setUnit] = useState<Unit>("mbps");
 
   const isTransfer = st.phase === "download" || st.phase === "upload";
+  const onLmntl = window.location.hostname.includes("lmntltools");
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
@@ -69,7 +71,7 @@ export default function App() {
         <p className="mono mx-auto max-w-[1120px] px-5 py-4 text-center text-[10px] leading-relaxed text-ink-40 sm:px-10">
           5 parallel streams, summed · TCP slow-start discarded · 90th-percentile bandwidth ·
           TTFB ping · jitter = mean consecutive RTT delta
-          {window.location.hostname.includes("lmntltools") && (
+          {onLmntl && (
             <>
               {" · "}
               <button
@@ -85,6 +87,10 @@ export default function App() {
           )}
         </p>
       </footer>
+
+      {/* the constant LMNTL studio signature — on the instrument too, not just
+          the landing, since Pacer is where visitors actually spend their time */}
+      {onLmntl && <LmntlFooter />}
 
       <p className="sr-only" aria-live="polite">
         {statusMessage(st, unit)}
