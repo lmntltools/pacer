@@ -44,7 +44,8 @@ jobs:
   # Publishes to GitHub Pages. Gated to push-to-main and manual runs, so opening
   # a PR never triggers it. Self-contained (build + Pages steps together) so the
   # Pages-specific actions only execute when we actually intend to publish.
-  # Requires a one-time repo setup: Settings -> Pages -> Source -> GitHub Actions.
+  # configure-pages runs with enablement:true, so the first deploy turns Pages on
+  # for the repo automatically (no manual Settings -> Pages step needed).
   deploy:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: build
@@ -70,6 +71,10 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          # Auto-enable Pages (Actions source) on first run via the workflow token,
+          # so no manual repo setting is required.
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
