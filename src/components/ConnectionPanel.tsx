@@ -39,69 +39,67 @@ export function ConnectionPanel({ meta, ipv4, effectiveType, variant = "panel" }
       effectiveType ? effectiveType.toUpperCase() : "",
     ].filter(Boolean) as string[];
     return (
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-white/[0.07] pt-4 font-mono text-[11px]">
-        <span className="mr-1 text-[10px] uppercase tracking-[0.16em] text-fg-faint">Connection</span>
+      <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-t border-line pt-4">
+        <span className="eng mr-1">Connection</span>
         {primaryIp && (
           <span className="flex items-baseline gap-1.5">
-            {primaryFamily && <span className="text-[9px] uppercase tracking-wide text-accent-soft">{primaryFamily}</span>}
-            <span className="break-all text-fg-dim">{primaryIp}</span>
+            {primaryFamily && <span className="eng !text-signal-ink">{primaryFamily}</span>}
+            <span className="mono break-all text-[11px] text-ink-60">{primaryIp}</span>
           </span>
         )}
         {secondaryIp && (
           <span className="flex items-baseline gap-1.5">
-            <span className="text-white/15">·</span>
-            <span className="text-[9px] uppercase tracking-wide text-fg-faint">IPv6</span>
-            <span className="break-all text-fg-faint">{secondaryIp}</span>
+            <span className="text-line-ctl">·</span>
+            <span className="eng">IPv6</span>
+            <span className="mono break-all text-[11px] text-ink-40">{secondaryIp}</span>
           </span>
         )}
         {tail.map((p, i) => (
-          <span key={i} className="flex items-baseline gap-2">
-            <span className="text-white/15">·</span>
-            <span className="text-fg-dim">{p}</span>
+          <span key={i} className="flex items-baseline gap-2.5">
+            <span className="text-line-ctl">·</span>
+            <span className="mono text-[11px] text-ink-60">{p}</span>
           </span>
         ))}
       </div>
     );
   }
 
-  // ---- tall panel (idle stage) ---------------------------------------------
+  // ---- tall panel (idle stage) — a rack module -----------------------------
   return (
-    <div className="flex h-full flex-col justify-center rounded-xl border border-white/[0.07] bg-ink-850/40 px-5 py-4 sm:px-6">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-fg-faint">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(61,245,196,0.9)]" />
-          Your connection
+    <div className="flex h-full flex-col justify-center rounded-mod border border-line bg-panel px-5 py-5 sm:px-6">
+      <div className="flex items-center justify-between gap-2 border-b border-line-soft pb-3">
+        <div className="flex items-center gap-2.5">
+          <span className="led on-dark" style={{ backgroundColor: "var(--signal)", borderColor: "var(--signal)" }} aria-hidden="true" />
+          <span className="eng">Your connection</span>
         </div>
         {primaryFamily && (
-          <span className="rounded border border-white/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-accent-soft">
+          <span className="eng rounded-ctrl border border-line px-1.5 py-0.5 !text-signal-ink">
             {primaryFamily}
           </span>
         )}
       </div>
 
       {!meta && !primaryIp ? (
-        <div className="mt-4 font-mono text-sm text-fg-faint">Detecting…</div>
+        <div className="mono mt-4 text-sm text-ink-40">Detecting…</div>
       ) : (
         <>
-          <div className="mt-3 font-mono text-[clamp(1.1rem,2.4vw,1.7rem)] font-medium leading-tight text-fg break-all">
+          <div className="mono mt-4 break-all text-[clamp(1.1rem,2.4vw,1.7rem)] font-medium leading-tight text-ink">
             {primaryIp || "—"}
           </div>
           {secondaryIp && (
-            <div className="mt-1.5 flex items-baseline gap-2 font-mono text-[11px] text-fg-faint">
-              <span className="uppercase tracking-wide">IPv6</span>
-              <span className="break-all">{secondaryIp}</span>
+            <div className="mt-1.5 flex items-baseline gap-2">
+              <span className="eng">IPv6</span>
+              <span className="mono break-all text-[11px] text-ink-40">{secondaryIp}</span>
             </div>
           )}
-          <div className="mt-1.5 font-mono text-[13px] text-accent-soft">
-            {meta?.isp || "Unknown ISP"}
-          </div>
+          <div className="mono mt-2 text-[13px] text-signal-ink">{meta?.isp || "Unknown ISP"}</div>
 
           {meta && (
-            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t border-white/[0.07] pt-3.5">
+            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2.5 border-t border-line-soft pt-3.5">
               {detail(meta, effectiveType).map(([k, v]) => (
-                <div key={k} className="flex flex-col">
-                  <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-fg-faint">{k}</span>
-                  <span className="mt-0.5 font-mono text-[13px] text-fg-dim tnum">{v}</span>
+                <div key={k} className="flex flex-col gap-1">
+                  <span className="eng">{k}</span>
+                  <span className="mono text-[13px] text-ink-60 tnum">{v}</span>
                 </div>
               ))}
             </div>

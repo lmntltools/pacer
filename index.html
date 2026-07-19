@@ -1,16 +1,40 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Content Security Policy (defense-in-depth; the app has no user input or
+      auth, but this is cheap hardening for a public deploy).
+      - script-src pins this file's inline theme script by hash + own bundle ('self').
+        If you edit that inline <script>, recompute the sha256 or the browser drops it.
+      - connect-src must list every host the app calls: the Worker (keep in sync with
+        WORKER_BASE_URL in src/config.ts) and the IPv4 echo (drop it if you disable
+        ENABLE_IPV4_ECHO). style-src needs 'unsafe-inline' for React inline styles.
+      Note: frame-ancestors / X-Content-Type-Options / X-Frame-Options can't be set
+      via <meta>; GitHub Pages already sends X-Content-Type-Options: nosniff.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-MAJb1rHNtu5CA6DIcaIuzVwGxbTldD1MtYs5+9VSIrM='; connect-src 'self' https://pacer-speedtest.simdexapp.workers.dev https://api4.ipify.org"
+    />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#080A0C" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#e3e4e0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141619" media="(prefers-color-scheme: dark)" />
     <meta
       name="description"
       content="Pacer — a precision internet speed test with a hand-written measurement engine. Real parallel-stream throughput, TTFB ping, jitter, and bufferbloat."
     />
     <title>Pacer — Internet Speed Test</title>
+    <!-- apply the saved palette before first paint to avoid a theme flash -->
+    <script>
+      try {
+        var t = localStorage.getItem("pacer-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

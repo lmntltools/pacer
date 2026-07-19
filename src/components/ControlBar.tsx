@@ -6,14 +6,24 @@ import { formatBytes, formatTimestamp } from "../lib/format";
 import { buildShareText, copyText } from "../lib/share";
 import { CheckIcon, CopyIcon, PlayIcon, RetryIcon, ShareIcon, StopIcon } from "./icons";
 
+// Shared machined-key base for every button in the bar.
+const BTN =
+  "inline-flex items-center justify-center gap-2 rounded-ctrl border font-sans uppercase " +
+  "text-[13px] tracking-[0.04em] transition-[transform,background,border-color,color] " +
+  "duration-100 ease-snap active:translate-y-px [font-variation-settings:'wdth'_90,'wght'_680]";
+
 function UnitToggle({ unit, onChange }: { unit: Unit; onChange: (u: Unit) => void }) {
   const opts: { key: Unit; label: string }[] = [
     { key: "mbps", label: "Mbps" },
     { key: "mbytes", label: "MB/s" },
   ];
   return (
-    <div role="radiogroup" aria-label="Throughput unit" className="inline-flex rounded-md border border-white/10 p-0.5">
-      {opts.map((o) => {
+    <div
+      role="radiogroup"
+      aria-label="Throughput unit"
+      className="inline-flex overflow-hidden rounded-ctrl border border-ink"
+    >
+      {opts.map((o, i) => {
         const active = unit === o.key;
         return (
           <button
@@ -22,8 +32,9 @@ function UnitToggle({ unit, onChange }: { unit: Unit; onChange: (u: Unit) => voi
             aria-checked={active}
             onClick={() => onChange(o.key)}
             className={[
-              "rounded-[5px] px-3 py-1 font-mono text-[11px] tracking-wide transition-colors",
-              active ? "bg-accent/15 text-accent" : "text-fg-faint hover:text-fg-dim",
+              "mono px-3.5 py-2 text-[12px] transition-colors duration-[90ms] ease-snap",
+              i > 0 ? "border-l border-line" : "",
+              active ? "bg-ink text-panel" : "bg-panel text-ink-60 hover:text-ink",
             ].join(" ")}
           >
             {o.label}
@@ -45,10 +56,7 @@ function PrimaryAction({
 }) {
   if (status === "running") {
     return (
-      <button
-        onClick={onCancel}
-        className="inline-flex items-center gap-2 rounded-md border border-white/12 px-6 py-2.5 text-[14px] font-medium text-fg-dim transition-colors hover:border-bad/60 hover:text-bad"
-      >
+      <button onClick={onCancel} className={`${BTN} border-ink bg-panel px-6 py-3 text-ink`}>
         <StopIcon className="text-[13px]" />
         Stop
       </button>
@@ -56,10 +64,7 @@ function PrimaryAction({
   }
   if (status === "done" || status === "error") {
     return (
-      <button
-        onClick={onStart}
-        className="inline-flex items-center gap-2 rounded-md border border-accent/40 bg-accent/10 px-6 py-2.5 text-[14px] font-semibold text-accent transition-colors hover:bg-accent/15"
-      >
+      <button onClick={onStart} className={`${BTN} border-ink bg-panel px-6 py-3 text-ink hover:bg-seat`}>
         <RetryIcon className="text-[13px]" />
         Run again
       </button>
@@ -68,7 +73,7 @@ function PrimaryAction({
   return (
     <button
       onClick={onStart}
-      className="inline-flex items-center gap-2.5 rounded-md bg-accent px-8 py-3 text-[15px] font-semibold text-ink-900 shadow-[0_0_34px_-8px_rgba(61,245,196,0.8)] transition-transform hover:scale-[1.02] active:scale-100"
+      className={`${BTN} border-signal bg-signal px-8 py-3.5 text-white hover:border-signal-deep hover:bg-signal-deep`}
     >
       <PlayIcon className="text-[14px]" />
       Start test
@@ -94,20 +99,18 @@ function ShareButtons({ result, unit }: { result: SpeedTestResult; unit: Unit })
     }
   };
 
+  const ghost =
+    "inline-flex items-center gap-1.5 rounded-ctrl border border-line px-3 py-2 " +
+    "mono text-[11px] text-ink-60 transition-colors hover:border-ink hover:text-ink";
+
   return (
     <div className="flex items-center gap-2">
-      <button
-        onClick={doCopy}
-        className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-3 py-1.5 font-mono text-[11px] text-fg-dim transition-colors hover:border-accent/40 hover:text-accent"
-      >
-        {copied ? <CheckIcon className="text-accent" /> : <CopyIcon />}
+      <button onClick={doCopy} className={ghost}>
+        {copied ? <CheckIcon className="text-signal-ink" /> : <CopyIcon />}
         {copied ? "Copied" : "Copy"}
       </button>
       {canShare && (
-        <button
-          onClick={doShare}
-          className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-3 py-1.5 font-mono text-[11px] text-fg-dim transition-colors hover:border-accent/40 hover:text-accent"
-        >
+        <button onClick={doShare} className={ghost}>
           <ShareIcon />
           Share
         </button>
@@ -126,14 +129,13 @@ interface Props {
 }
 
 export function ControlBar({ status, result, unit, onUnitChange, onStart, onCancel }: Props) {
-  const transferred =
-    result ? (result.download?.bytes ?? 0) + (result.upload?.bytes ?? 0) : 0;
+  const transferred = result ? (result.download?.bytes ?? 0) + (result.upload?.bytes ?? 0) : 0;
   return (
-    <div className="flex flex-col gap-4 border-t border-white/[0.07] pt-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
         <PrimaryAction status={status} onStart={onStart} onCancel={onCancel} />
         {status === "done" && result && (
-          <span className="hidden font-mono text-[11px] text-fg-faint tnum md:inline">
+          <span className="mono hidden text-[11px] text-ink-40 tnum md:inline">
             {formatTimestamp(result.timestamp)} · {formatBytes(transferred)}
           </span>
         )}

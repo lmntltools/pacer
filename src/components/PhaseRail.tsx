@@ -12,34 +12,42 @@ const STEPS: { phase: Phase; label: string }[] = [
   { phase: "upload", label: "Upload" },
 ];
 
+type StepState = "active" | "done" | "pending";
+
+// LED fill per state — amber = working, green = complete, neutral = standby.
+const LED_FILL: Record<StepState, string> = {
+  active: "var(--meter-amber)",
+  done: "var(--meter-green)",
+  pending: "var(--ink-30)",
+};
+
 export function PhaseRail({ phase }: { phase: Phase }) {
   return (
-    <div className="flex items-center gap-0 font-mono">
+    <div className="flex items-center gap-0">
       {STEPS.map((step, i) => {
-        const state =
+        const state: StepState =
           phase === step.phase ? "active" : rank(phase) > rank(step.phase) ? "done" : "pending";
-        const color =
-          state === "active" ? "text-accent" : state === "done" ? "text-fg-dim" : "text-fg-faint";
+        const labelColor =
+          state === "active" ? "!text-ink" : state === "done" ? "!text-ink-60" : "";
         return (
           <div key={step.phase} className="flex items-center">
-            <div className="flex items-center gap-2">
-              <span className={`text-[10px] tabular-nums ${state === "pending" ? "text-fg-faint" : "text-accent/70"}`}>
+            <div className="flex items-center gap-2.5">
+              <span
+                className={`led ${state === "active" ? "animate-flick" : ""}`}
+                style={{ backgroundColor: LED_FILL[state], borderColor: LED_FILL[state] }}
+                aria-hidden="true"
+              />
+              <span className="mono text-[10px] text-ink-40 tnum">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span
-                className={`text-[11px] uppercase tracking-[0.18em] transition-colors duration-300 ${color}`}
-              >
-                {step.label}
-              </span>
-              {state === "active" && (
-                <span className="h-1.5 w-1.5 animate-pulse-ring rounded-full bg-accent shadow-[0_0_8px_rgba(61,245,196,0.9)]" />
-              )}
+              <span className={`eng ${labelColor}`}>{step.label}</span>
             </div>
             {i < STEPS.length - 1 && (
               <span
-                className={`mx-3 h-px w-8 sm:w-14 transition-colors duration-500 ${
-                  rank(phase) > rank(step.phase) ? "bg-accent/40" : "bg-white/10"
-                }`}
+                className="mx-3 h-px w-8 transition-colors duration-[300ms] sm:w-14"
+                style={{
+                  background: rank(phase) > rank(step.phase) ? "var(--signal-line)" : "var(--line)",
+                }}
               />
             )}
           </div>
