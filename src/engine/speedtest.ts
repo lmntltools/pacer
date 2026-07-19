@@ -65,6 +65,12 @@ const UL_POOL_MAX = 16 * MB;
 const UL_START_CHUNK = 512 * 1024;
 const UL_MIN_CHUNK = 128 * 1024;
 const ADAPT_TARGET_S = 1.5; // aim each request to last ~1.5s
+// Desync the parallel streams so their request boundaries never all line up —
+// otherwise every stream can finish its request at the same instant, leaving a
+// brief moment where the whole link goes idle (a visible dip to 0 on the chart,
+// and a slightly low mean). We stagger their starts and give each a different
+// target request duration so the boundaries stay spread across the run.
+const STREAM_STAGGER_MS = 140;
 const LOADED_PING_INTERVAL_MS = 350;
 const PING_TIMEOUT_MS = 5000;
 
@@ -353,11 +359,11 @@ export class SpeedTestEngine {
     try {
       const workers =
         kind === "download"
-          ? Array.from({ length: parallelStreams }, () =>
-              this.downloadWorker(phaseCtrl.signal, counter, currentMbps),
+          ? Array.from({ length: parallelStreams }, (_, i) =>
+              this.downloadWorker(phaseCtrl.signal, counter, currentMbps, i),
             )
-          : Array.from({ length: parallelStreams }, () =>
-              this.uploadWorker(phaseCtrl.signal, counter, currentMbps),
+          : Array.from({ length: parallelStreams }, (_, i) =>
+              this.uploadWorker(phaseCtrl.signal, counter, currentMbps, i),
             );
       await Promise.all(workers);
     } finally {
@@ -380,12 +386,29 @@ export class SpeedTestEngine {
     return this.summarize(samples, counter.bytes, durationMs, warmupMs, kind === "upload" ? "windowed" : "instant");
   }
 
+  /**
+   * Per-stream target request duration. Spreading these (0.8×–1.3× of the base
+   * target) means streams settle at different chunk sizes and their request
+   * boundaries drift apart instead of all landing together — so at any instant
+   * most streams are mid-transfer and the summed rate never falls to zero.
+   */
+  private streamTargetSeconds(index: number): number {
+    const n = this.opts.parallelStreams;
+    if (n <= 1) return ADAPT_TARGET_S;
+    const frac = index / (n - 1); // 0..1 across the streams
+    return ADAPT_TARGET_S * (0.8 + 0.5 * frac);
+  }
+
   /** One download stream: fetch → read → count, looping with adaptive size. */
   private async downloadWorker(
     signal: AbortSignal,
     counter: { bytes: number },
     currentMbps: () => number,
+    index: number,
   ): Promise<void> {
+    // Offset each stream's first request so their boundaries start out spread.
+    if (index > 0) await sleep(index * STREAM_STAGGER_MS);
+    const targetS = this.streamTargetSeconds(index);
     let chunk = DL_START_CHUNK;
     while (!signal.aborted) {
       const url = `${this.opts.baseUrl}/down?bytes=${chunk}&cb=${cb()}`;
@@ -406,7 +429,7 @@ export class SpeedTestEngine {
         if (signal.aborted) break;
         await sleep(120); // transient network blip: brief backoff, then retry
       }
-      chunk = this.nextChunk(currentMbps(), chunk, DL_MIN_CHUNK, DL_MAX_CHUNK);
+      chunk = this.nextChunk(currentMbps(), chunk, DL_MIN_CHUNK, DL_MAX_CHUNK, targetS);
     }
   }
 
@@ -415,7 +438,10 @@ export class SpeedTestEngine {
     signal: AbortSignal,
     counter: { bytes: number },
     currentMbps: () => number,
+    index: number,
   ): Promise<void> {
+    if (index > 0) await sleep(index * STREAM_STAGGER_MS);
+    const targetS = this.streamTargetSeconds(index);
     let chunk = UL_START_CHUNK;
     while (!signal.aborted) {
       try {
@@ -424,7 +450,7 @@ export class SpeedTestEngine {
         if (signal.aborted || isAbort(e)) break;
         await sleep(120);
       }
-      chunk = this.nextChunk(currentMbps(), chunk, UL_MIN_CHUNK, UL_POOL_MAX);
+      chunk = this.nextChunk(currentMbps(), chunk, UL_MIN_CHUNK, UL_POOL_MAX, targetS);
     }
   }
 
@@ -495,11 +521,17 @@ export class SpeedTestEngine {
     return this.uploadPool;
   }
 
-  /** Adaptive request size: aim for ~ADAPT_TARGET_S seconds of transfer each. */
-  private nextChunk(curMbps: number, prev: number, lo: number, hi: number): number {
+  /** Adaptive request size: aim for ~targetS seconds of transfer each. */
+  private nextChunk(
+    curMbps: number,
+    prev: number,
+    lo: number,
+    hi: number,
+    targetS: number = ADAPT_TARGET_S,
+  ): number {
     if (curMbps > 0) {
       const bytesPerSec = (curMbps * 1e6) / 8;
-      return clamp(Math.round(bytesPerSec * ADAPT_TARGET_S), lo, hi);
+      return clamp(Math.round(bytesPerSec * targetS), lo, hi);
     }
     return clamp(prev * 2, lo, hi); // no reading yet: double until we have one
   }

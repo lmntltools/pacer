@@ -5,6 +5,17 @@ export function unitLabel(unit: Unit): string {
   return unit === "mbps" ? "Mbps" : "MB/s";
 }
 
+/**
+ * The same speed expressed in the *other* unit, e.g. "≈ 60.7 MB/s" when the
+ * headline is in Mbps. Surfaced under results so Mbps (what ISPs and tools like
+ * Ookla quote) can't be misread against MB/s — they differ by exactly 8×.
+ */
+export function formatAltUnit(mbps: number | null | undefined, unit: Unit): string {
+  if (mbps == null || !Number.isFinite(mbps)) return "";
+  const other: Unit = unit === "mbps" ? "mbytes" : "mbps";
+  return `≈ ${formatSpeed(mbps, other)} ${unitLabel(other)}`;
+}
+
 export function toUnit(mbps: number, unit: Unit): number {
   return unit === "mbps" ? mbps : mbpsToMBytes(mbps);
 }
