@@ -3,13 +3,13 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
-  # Build (but don't publish) on PRs so a redesign is validated before merge.
+  # Validate the build on PRs (typecheck + vite build) — no Pages steps, so a
+  # PR check never depends on repo Pages settings.
   pull_request:
   # Manual trigger — run this from any branch to publish a live preview to the
-  # Pages URL on demand (see the `deploy` job's condition below).
+  # Pages URL on demand (see the `deploy` job below).
   workflow_dispatch:
 
-# Permissions the deploy-pages action needs.
 permissions:
   contents: read
   pages: write
@@ -21,6 +21,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Runs on every event. Pure build validation — proves the app typechecks and
+  # bundles. This is the check that gates PRs; it touches nothing outside CI.
   build:
     runs-on: ubuntu-latest
     steps:
@@ -39,16 +41,10 @@ jobs:
       - name: Type-check + build
         run: npm run build
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
-
-  # Publishes only on a push to main or a manual run — never on a pull_request
-  # event — so opening a PR validates the build without touching the live site.
+  # Publishes to GitHub Pages. Gated to push-to-main and manual runs, so opening
+  # a PR never triggers it. Self-contained (build + Pages steps together) so the
+  # Pages-specific actions only execute when we actually intend to publish.
+  # Requires a one-time repo setup: Settings -> Pages -> Source -> GitHub Actions.
   deploy:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: build
@@ -57,6 +53,29 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
