@@ -69,6 +69,20 @@ export default function App() {
         <p className="mono mx-auto max-w-[1120px] px-5 py-4 text-center text-[10px] leading-relaxed text-ink-40 sm:px-10">
           5 parallel streams, summed · TCP slow-start discarded · 90th-percentile bandwidth ·
           TTFB ping · jitter = mean consecutive RTT delta
+          {window.location.hostname.includes("lmntltools") && (
+            <>
+              {" · "}
+              <button
+                onClick={() => {
+                  sessionStorage.removeItem("pacer-entered");
+                  window.location.replace("/");
+                }}
+                className="underline underline-offset-2 hover:text-signal-ink"
+              >
+                product page
+              </button>
+            </>
+          )}
         </p>
       </footer>
 
